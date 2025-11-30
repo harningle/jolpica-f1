@@ -66,10 +66,18 @@ def test_viewsets(client: APIClient, endpoint: str, path: Path, django_assert_ma
                 if expected_data.get("positionText") in ("N", "W") and expected_data.get("status") != "Withdrew":
                     # Ergast is inconsistent with positionText vs status
                     expected_data["positionText"] = "R"
-                if result_data.get("Time"):
-                    # Ergast is inconsistent with trailing 0s
-                    expected_data["Time"]["time"] = expected_data["Time"]["time"].rstrip("0")
-                    result_data["Time"]["time"] = result_data["Time"]["time"].rstrip("0")
+                if expected_data.get("Time"):
+                    if expected_data["Time"].get("time"):
+                        # Ergast is inconsistent with trailing 0
+                        expected_data["Time"]["time"] = expected_data["Time"]["time"].rstrip("0")
+                        result_data["Time"]["time"] = result_data["Time"]["time"].rstrip("0")
+                    else:
+                        assert "time" not in result_data["Time"]
+                # For not classified or unfinished drivers, Ergast doesn't return time at all. We have time in
+                # milliseconds for DNF but classified drivers, but never have time string like "+1.000s"
+                elif result_data.get("Time"):
+                    assert "time" not in result_data["Time"]
+                    del result_data["Time"]
     if re.search(r"(?i)laps(?:/[0-9]+)?.json", endpoint):
         for i, race_data in enumerate(result["MRData"]["RaceTable"]["Races"]):
             for j, laps_data in enumerate(race_data["Laps"]):

@@ -214,13 +214,17 @@ class ListResultsSerializer(serializers.ListSerializer):
                         result["positionText"] = "F"
                     case _:
                         result["positionText"] = "R"
-            if session_entry.time and session_entry.is_classified:
+            if session_entry.time:
+                # For all drivers who have a finishing time, show their total race time in milliseconds
                 result["Time"] = {
                     "millis": str(int(session_entry.time.total_seconds() * 1000)),
-                    "time": self.calculate_finish_display_from_millis(
-                        session_entry.time, round_to_winner_time[round_id]
-                    ),
                 }
+                # Only for those finishing normally (including lapped), also show the gap to the winner
+                if session_entry.status in {SessionStatus.FINISHED, SessionStatus.LAPPED}:
+                    result["Time"]["time"] = self.calculate_finish_display_from_millis(
+                        session_entry.time, round_to_winner_time[round_id]
+                    )
+                # Those lapped or DNS or DSQ or etc. do not get a gap to winner shown
             if not is_qualifying and session_entry.fastest_lap_list:
                 fastest_lap = session_entry.fastest_lap_list[0]
                 result["FastestLap"] = {
